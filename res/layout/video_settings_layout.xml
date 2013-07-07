@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingLeft="5dip"
+    android:paddingRight="5dip"
+    android:orientation="vertical" >
+    <LinearLayout
+        android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+    	android:orientation="horizontal"
+        >
+        <TextView
+            android:text="v_codec"
+         	android:layout_width="65dip"
+         	android:layout_height="wrap_content"
+            />
+    
+	    <Button 
+	        android:id="@+id/video_codec_picker"
+	        android:text="codec"
+	         android:layout_width="match_parent"
+	         android:layout_height="wrap_content"
+	        />
+    
+    </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+    	android:orientation="horizontal"
+        >
+        <TextView 
+            
+            android:text="f_format"
+         	android:layout_width="65dip"
+         	android:layout_height="wrap_content"
+            />
+	    <Button 
+	        android:id="@+id/file_format_picker"
+	        android:text="file format"
+	         android:layout_width="match_parent"
+	         android:layout_height="wrap_content"
+	        />
+ </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+    	android:orientation="horizontal"
+        >
+        <TextView 
+            
+            android:text="durat"
+         	android:layout_width="65dip"
+         	android:layout_height="wrap_content"
+            />
+	    <EditText 
+	        android:id="@+id/duration_field"
+	        android:hint="ms"
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        />
+     </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+    	android:orientation="horizontal"
+        >
+        <TextView 
+            
+            android:text="fps"
+         	android:layout_width="65dip"
+         	android:layout_height="wrap_content"
+            />
+	    <EditText 
+	        android:id="@+id/frame_rate_field"
+	        android:hint="fps"
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        />
+     </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+    	android:orientation="horizontal"
+        >
+        <TextView 
+            
+            android:text="W x H"
+         	android:layout_width="65dip"
+         	android:layout_height="wrap_content"
+            />
+
+	    <Button 
+	        android:id="@+id/video_size"
+	        android:text="video size"
+	         android:layout_width="match_parent"
+	         android:layout_height="wrap_content"
+	        />
+        <!-- 
+	    <EditText 
+	        android:id="@+id/frame_width_field"
+	        android:hint="px"
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        />
+	        -->
+     </LinearLayout>
+     <!--  
+    <LinearLayout
+        android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+    	android:orientation="horizontal"
+        >
+        <TextView 
+            
+            android:text="f_height"
+         	android:layout_width="65dip"
+         	android:layout_height="wrap_content"
+            />
+	    <EditText 
+	        android:id="@+id/frame_height_field"
+	        android:hint="px"
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        />
+     </LinearLayout>
+     -->
+    <LinearLayout
+        android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+    	android:orientation="horizontal"
+        >
+        <TextView 
+            
+            android:text="v_brate"
+         	android:layout_width="65dip"
+         	android:layout_height="wrap_content"
+            />
+	    <EditText 
+	        android:id="@+id/video_bit_rate_field"
+	        android:hint="bits"
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        />
+     </LinearLayout>
+
+    <Button 
+        android:id="@+id/done_button"
+        android:text="done"
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+        />
+
+    <!--  
+    editor.putInt(duration, profile.duration);
+	      editor.putInt(fileFormat, profile.fileFormat);
+	      editor.putInt(quality, profile.quality);
+	      editor.putInt(videoCodec, profile.videoCodec);
+	      editor.putInt(videoFrameHeight, profile.videoFrameHeight);
+	      editor.putInt(videoFrameRate, profile.videoFrameRate);
+	      editor.putInt(videoFrameWidth, profile.videoFrameWidth);
+    -->
+    
+</LinearLayout>

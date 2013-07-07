@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingLeft="10dip"
+    >
+    
+    <TextView 
+        android:id="@+id/cell_id_field"
+        android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+        />
+    
+    <TextView 
+        android:id="@+id/lac_field"
+        android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+        />
+    
+    <TextView 
+        android:id="@+id/provider_name_field"
+        android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+        />
+    
+    <TextView 
+        android:id="@+id/mcc_field"
+        android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+        />
+    <TextView 
+        android:id="@+id/mnc_field"
+        android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+        />
+    <TextView 
+        android:id="@+id/country_field"
+        android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+        />
+    
+    <TextView 
+        android:id="@+id/cellid_lat_field"
+        android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+        />
+    
+    <TextView 
+        android:id="@+id/cellid_lon_field"
+        android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+        />
+    
+
+</LinearLayout>
