@@ -1,7 +1,15 @@
 package com.itdoesnotmatter.fifo;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.channels.Channels;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 
 import android.app.Activity;
 import android.hardware.Camera;
@@ -16,6 +24,14 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import com.coremedia.iso.IsoFile;
+import com.coremedia.iso.boxes.TimeToSampleBox;
+import com.googlecode.mp4parser.authoring.Movie;
+import com.googlecode.mp4parser.authoring.Track;
+import com.googlecode.mp4parser.authoring.builder.DefaultMp4Builder;
+import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
+import com.googlecode.mp4parser.authoring.tracks.AppendTrack;
+import com.googlecode.mp4parser.authoring.tracks.CroppedTrack;
 import com.itdoesnotmatter.fifo.utils.CameraUtils;
 import com.itdoesnotmatter.fifo.utils.Constants;
 import com.itdoesnotmatter.fifo.utils.IntentKeys;
@@ -40,6 +56,7 @@ public class CameraActivity extends Activity{
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.camera_preview_layout);
         
         Bundle extra = this.getIntent().getExtras();
@@ -108,9 +125,10 @@ public class CameraActivity extends Activity{
             }
         );
         
-        
+//        VideoManager videoManager = new VideoManager();
+//        videoManager.cut();
     }
-
+ 
     private boolean prepareVideoRecorder(){
     	
     	if (mCamera == null) {
