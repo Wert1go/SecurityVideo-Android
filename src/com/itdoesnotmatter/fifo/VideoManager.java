@@ -22,41 +22,79 @@ import com.googlecode.mp4parser.authoring.builder.DefaultMp4Builder;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.AppendTrack;
 import com.googlecode.mp4parser.authoring.tracks.CroppedTrack;
+import com.itdoesnotmatter.fifo.model.VideoFile;
+import com.itdoesnotmatter.fifo.model.VideoQueue;
 
 public class VideoManager {
-
-	public void appendVideo() {
-    	
+	public static final String RECORD_MODE = 	"RECORD_MODE";
+	
+	public static final int DEFAULT_BITRATE = 	2000000;
+	public static final int DEFAULT_FPS = 		30;
+	
+	public static final int MODE_VIDEO_REG = 	3423;
+	public static final int MODE_REPORT = 		3545;
+	
+	public static final int MAX_VIDEO_LEN = 		(int) 10 * 1000;
+	public static final int MAX_VIDEO_LEN_REPORT = 	(int) 1.0 * 60 * 1000;
+	
+	public void createVideoFromQueue(VideoQueue videoQueue) {
+		int count = videoQueue.getVideoQueue().size();
+		
+		if (count == 1) {
+			//видео готово
+		} else if (count == 2) {
+			this.joinVideo(videoQueue.getVideoQueue().get(0), videoQueue.getVideoQueue().get(1));
+//			this.joinVideo(
+//					new VideoFile(Environment.getExternalStorageDirectory() + "/Video/1374545060131.mp4"), 
+//					new VideoFile(Environment.getExternalStorageDirectory() + "/Video/1374545362316.mp4"));
+		}
+	}
+	
+	@SuppressWarnings("static-access")
+	public VideoFile joinVideo(VideoFile videoFile1, VideoFile videoFile2) {
+    	VideoFile outputVideoFile = null;
 		try {
-			File file1 = new File(Environment.getExternalStorageDirectory() + "/Video/1373803987950.mp4");
+			File file1 = videoFile1.getFile();
+			Log.e("LOG", "test " + videoFile1.filePath);
 	    	InputStream inputStream1 = new FileInputStream(file1);
 			
-			File file2 = new File(Environment.getExternalStorageDirectory() + "/Video/1373807736772.mp4");
-
+			File file2 = videoFile2.getFile();
 	    	InputStream inputStream2 = new FileInputStream(file2);
 	    	
 	        MovieCreator mc = new MovieCreator();
-			@SuppressWarnings("static-access")
-			Movie video = mc.build(Channels.newChannel(inputStream1));
-			@SuppressWarnings("static-access")
-			Movie audio = mc.build(Channels.newChannel(inputStream2));
-
-			List<Track> videoTracks = video.getTracks();
+			Movie video1 = mc.build(Channels.newChannel(inputStream1));
+			Movie video2 = mc.build(Channels.newChannel(inputStream2));
 			
-			Log.e("videoTracks", "videoTracks " +videoTracks.size());
-			
-			video.setTracks(new LinkedList<Track>());
+			List<Track> videoTracks1 = video1.getTracks();
+			video1.setTracks(new LinkedList<Track>());
 
-			List<Track> audioTracks = audio.getTracks();
-			Log.e("audioTracks", "audioTracks " +audioTracks.size());
+			List<Track> videoTracks2 = video2.getTracks();
 			
-			video.addTrack(new AppendTrack(videoTracks.get(0), audioTracks.get(0)));
-			video.addTrack(new AppendTrack(videoTracks.get(1), audioTracks.get(1)));
+			long video1Length = (long) Math.floor(this.getDuration(videoTracks1.get(0))/100);
+			long video2Length = (long) Math.floor(this.getDuration(videoTracks2.get(0))/100);
+			
+			if (video2Length >= MAX_VIDEO_LEN) {
+				return videoFile2;
+			} else if (video2Length < video1Length) {
+				long delta = video2Length;
+				
+				VideoFile cuttedFile = this.cut(videoFile1, delta/1000, video1Length/1000);
+				if (cuttedFile != null) {
+					inputStream1 = new FileInputStream(cuttedFile.getFile());
+					video1 = mc.build(Channels.newChannel(inputStream1));
+					videoTracks1 = video1.getTracks();
+					video1.setTracks(new LinkedList<Track>());
+				}
+			}
+			
+			video1.addTrack(new AppendTrack(videoTracks1.get(0), videoTracks2.get(0)));
+			video1.addTrack(new AppendTrack(videoTracks1.get(1), videoTracks2.get(1)));
 
-	        IsoFile out = new DefaultMp4Builder().build(video);
-	        FileOutputStream fos = new FileOutputStream(new File(String.format(
-	        		Environment.getExternalStorageDirectory() +  "/Video/output.mp4"
-	        		)));
+	        IsoFile out = new DefaultMp4Builder().build(video1);
+	        outputVideoFile = new VideoFile(String.format(
+	        		Environment.getExternalStorageDirectory() +  "/Video/output1.mp4"
+	        		));
+	        FileOutputStream fos = new FileOutputStream(outputVideoFile.getFile());
 	        out.getBox(fos.getChannel());
 	        fos.close();
 		} catch (FileNotFoundException e) {
@@ -66,26 +104,24 @@ public class VideoManager {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
+		return outputVideoFile;
     }
     
-    public void cut() {
+    public VideoFile cut(VideoFile videoFile, long from, long to) {
+    	VideoFile outputFile = null;
+    	
     	try {
-    		 Movie movie = MovieCreator.build(new FileInputStream(
-    				 new File(String.format(
-    			        		Environment.getExternalStorageDirectory() +  "/Video/output.mp4"
-    			        		))
-    				 ).getChannel());
+    		 Movie movie = MovieCreator.build(new FileInputStream(videoFile.getFile()).getChannel());
 
              List<Track> tracks = movie.getTracks();
              
              movie.setTracks(new LinkedList<Track>());
              // remove all tracks we will create new tracks from the old
 
-             double startTime1 =2;
-             double endTime1 = 4;
-             double startTime2 =10;
-             double endTime2 = 11;
-
+             double startTime1 = from;
+             double endTime1 = to;
+             
              boolean timeCorrected = false;
 
              // Here we try to find a track that has sync samples. Since we can only start decoding
@@ -102,8 +138,6 @@ public class VideoManager {
                      }
                      startTime1 = correctTimeToSyncSample(track, startTime1, false);
                      endTime1 = correctTimeToSyncSample(track, endTime1, true);
-                     startTime2 = correctTimeToSyncSample(track, startTime2, false);
-                     endTime2 = correctTimeToSyncSample(track, endTime2, true);
                      timeCorrected = true;
                  }
              }
@@ -114,8 +148,6 @@ public class VideoManager {
                  double lastTime = 0;
                  long startSample1 = -1;
                  long endSample1 = -1;
-                 long startSample2 = -1;
-                 long endSample2 = -1;
 
                  for (int i = 0; i < track.getDecodingTimeEntries().size(); i++) {
                      TimeToSampleBox.Entry entry = track.getDecodingTimeEntries().get(i);
@@ -129,20 +161,13 @@ public class VideoManager {
                              // current sample is after the new start time and still before the new endtime
                              endSample1= currentSample;
                          }
-                         if (currentTime > lastTime && currentTime <= startTime2) {
-                             // current sample is still before the new starttime
-                             startSample2 = currentSample;
-                         }
-                         if (currentTime > lastTime && currentTime <= endTime2) {
-                             // current sample is after the new start time and still before the new endtime
-                             endSample2 = currentSample;
-                         }
+
                          lastTime = currentTime;
                          currentTime += (double) entry.getDelta() / (double) track.getTrackMetaData().getTimescale();
                          currentSample++;
                      }
                  }
-                 movie.addTrack(new AppendTrack(new CroppedTrack(track, startSample1, endSample1), new CroppedTrack(track, startSample2, endSample2)));
+                 movie.addTrack(new AppendTrack(new CroppedTrack(track, startSample1, endSample1)));
              }
              
              long start1 = System.currentTimeMillis();
@@ -150,15 +175,12 @@ public class VideoManager {
              IsoFile out = new DefaultMp4Builder().build(movie);
              long start2 = System.currentTimeMillis();
              
-             FileOutputStream fos = new FileOutputStream(new File(String.format(Environment.getExternalStorageDirectory() +  
- 	         		"/Video/output-%f-%f--%f-%f.mp4", startTime1, endTime1, startTime2, endTime2)));
- 	        out.getBox(fos.getChannel());
- 	        fos.close();
+             outputFile = new VideoFile(String.format(Environment.getExternalStorageDirectory() +  
+  	         		"/Video/output23-%f-%f.mp4", startTime1, endTime1));
              
-             long start3 = System.currentTimeMillis();
-             System.err.println("Building IsoFile took : " + (start2 - start1) + "ms");
-             System.err.println("Writing IsoFile took  : " + (start3 - start2) + "ms");
-             System.err.println("Writing IsoFile speed : " + (new File(String.format("output-%f-%f--%f-%f.mp4", startTime1, endTime1, startTime2, endTime2)).length() / (start3 - start2) / 1000) + "MB/s");
+             FileOutputStream fos = new FileOutputStream(outputFile.getFile());
+ 	         out.getBox(fos.getChannel());
+ 	         fos.close();
              
     	} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -167,6 +189,8 @@ public class VideoManager {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+    	
+    	return outputFile;
      }
 
      protected static long getDuration(Track track) {

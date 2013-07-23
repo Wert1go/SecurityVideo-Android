@@ -1,19 +1,15 @@
 package com.itdoesnotmatter.fifo;
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 
-import com.itdoesnotmatter.fifo.utils.Constants;
-import com.itdoesnotmatter.fifo.utils.IntentKeys;
-
 public class MenuActivity extends Activity implements OnClickListener{
-	Button cameraButton;
+	Button videoRegButton;
+	Button reportButton;
 	Button infoButton;
 	Button userInfoButton;
 	@Override
@@ -21,8 +17,10 @@ public class MenuActivity extends Activity implements OnClickListener{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.menu_activity_layout);
 		
-		cameraButton = (Button) findViewById(R.id.camera_button);
-		cameraButton.setOnClickListener(this);
+		videoRegButton = (Button) findViewById(R.id.videoreg_button);
+		videoRegButton.setOnClickListener(this);
+		reportButton = (Button) findViewById(R.id.report_button);
+		reportButton.setOnClickListener(this);
 		infoButton  = (Button) findViewById(R.id.provider_button);
 		infoButton.setOnClickListener(this);
 		
@@ -33,26 +31,15 @@ public class MenuActivity extends Activity implements OnClickListener{
 	@Override
 	public void onClick(View v) {
 		switch(v.getId()) {
-		case R.id.camera_button:
-			final Intent intent = new Intent (this, CameraActivity.class);
-			
-			final CharSequence[] items = Constants.videoQualityStrings();
-			AlertDialog.Builder builder = new AlertDialog.Builder(this);
-			builder.setTitle("Video quality");
-			builder.setItems(items, new DialogInterface.OnClickListener() {
-			    public void onClick(DialogInterface dialog, int item) {
-			    	if (item != 8) {
-			    		intent.putExtra(IntentKeys.VIDEO_QUALITY, item);
-			    	} else {
-			    		intent.setClass(getBaseContext(), VideoConfigurationActivity.class);
-			    	}
-			    	dialog.dismiss();
-		    		startActivity(intent);
-			    }
-			});
-			AlertDialog alert = builder.create();
-			alert.show();
-
+		case R.id.videoreg_button:
+			Intent intentVideoReg = new Intent (this, CameraActivity.class);
+			intentVideoReg.putExtra(VideoManager.RECORD_MODE, VideoManager.MODE_VIDEO_REG);
+			startActivity(intentVideoReg);
+			break;
+		case R.id.report_button:
+			Intent intentReport = new Intent (this, CameraActivity.class);
+			intentReport.putExtra(VideoManager.RECORD_MODE, VideoManager.MODE_REPORT);
+			startActivity(intentReport);
 			break;
 		case R.id.provider_button:
 			Intent intent1 = new Intent (this, ProviderInfoActvity.class);

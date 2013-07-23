@@ -1,57 +1,38 @@
 package com.itdoesnotmatter.fifo;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.channels.Channels;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
 
 import android.app.Activity;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.media.MediaRecorder.OnInfoListener;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
-import android.widget.Toast;
 
-import com.coremedia.iso.IsoFile;
-import com.coremedia.iso.boxes.TimeToSampleBox;
-import com.googlecode.mp4parser.authoring.Movie;
-import com.googlecode.mp4parser.authoring.Track;
-import com.googlecode.mp4parser.authoring.builder.DefaultMp4Builder;
-import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
-import com.googlecode.mp4parser.authoring.tracks.AppendTrack;
-import com.googlecode.mp4parser.authoring.tracks.CroppedTrack;
+import com.itdoesnotmatter.fifo.model.VideoFile;
+import com.itdoesnotmatter.fifo.model.VideoQueue;
 import com.itdoesnotmatter.fifo.utils.CameraUtils;
-import com.itdoesnotmatter.fifo.utils.Constants;
 import com.itdoesnotmatter.fifo.utils.IntentKeys;
-import com.itdoesnotmatter.fifo.utils.VideoSettings;
 
 public class CameraActivity extends Activity{
 	private static final String TAG = "CameraActivity";
-	
-	private static final int MAX_DURATION = 20 * 1000;
 	
 	public static final int SERVER_PORT = 4444;
 	private Camera mCamera;
     private CameraPreview mPreview;
     private boolean isRecording = false;
-    private String qualityString;
-    private int qualityCode;
-    private boolean customRecord;
+
     private MediaRecorder mMediaRecorder;
+    private Button captureButton;
+    private VideoQueue videoQueue;
     
-    public String targetFilePath;
+    private int mRecorderMode = -1;
     
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -61,19 +42,9 @@ public class CameraActivity extends Activity{
         
         Bundle extra = this.getIntent().getExtras();
         
-        int id = extra.getInt(IntentKeys.VIDEO_QUALITY, -1);
+        mRecorderMode = extra.getInt(VideoManager.RECORD_MODE, -1);
         
-        if (this.qualityCode != -1) {
-        	this.qualityCode = Constants.videoQualityIds()[id];
-        	this.qualityString = Constants.videoQualityStrings()[id];
-        } else {
-        	this.qualityCode = Constants.CUSTOM_QUALITY;
-        	this.qualityString = Constants.videoQualityStrings()[8];
-        }
-        
-        if (this.qualityCode == Constants.CUSTOM_QUALITY) {
-        	this.customRecord = true;
-        }
+        Log.e("mRecorderMode", mRecorderMode + "");
         
         // Create an instance of Camera
         mCamera = CameraUtils.getCameraInstance();
@@ -82,112 +53,96 @@ public class CameraActivity extends Activity{
         mPreview = new CameraPreview(this, mCamera);
         FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
         preview.addView(mPreview);
-        this.targetFilePath = targetString();
-        Button captureButton = (Button) findViewById(R.id.button_capture);
+        
+        captureButton = (Button) findViewById(R.id.button_capture);
         captureButton.setOnClickListener(
             new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (isRecording) {
-                        // stop recording and release camera
-                        mMediaRecorder.stop();  // stop the recording
-                        releaseMediaRecorder(); // release the MediaRecorder object
-                        mCamera.lock();         // take camera access back from MediaRecorder
-  
-                        // inform the user that recording has stopped
-                        isRecording = false;
-                        
-                        File file = new File(targetFilePath);
-                        long length = file.length();
-                        length = length/1024;
-                        
-                        Toast toast = Toast.makeText(getBaseContext(), "Resut file size: " + length + " KB", Toast.LENGTH_LONG);
-                        toast.show();
-                        
-                    } else {
-                        // initialize video camera
-                        if (prepareVideoRecorder()) {
-                            // Camera is available and unlocked, MediaRecorder is prepared,
-                            // now you can start recording
-                            mMediaRecorder.start();
-                            
-                            Log.e("mMediaRecorder.start()", "mMediaRecorder.start()");
-                            
-                            // inform the user that recording has started
-                            isRecording = true;
-                        } else {
-                            // prepare didn't work, release the camera
-                            releaseMediaRecorder();
-                            // inform user
-                        }
-                    }
+                	captureButton.setSelected(!captureButton.isSelected());
+                	if (isRecording) {
+                		new ConvertTask().execute();
+                	}
+                	toggleRecord();
                 }
             }
         );
-        
-//        VideoManager videoManager = new VideoManager();
-//        videoManager.cut();
+
     }
- 
+    
+    public void toggleRecord() {
+    	if (isRecording) {
+    		stopRecording();
+        } else {
+        	// initialize video camera
+            if (prepareVideoRecorder()) {
+                // Camera is available and unlocked, MediaRecorder is prepared,
+                // now you can start recording
+                mMediaRecorder.start();
+                // inform the user that recording has started
+                isRecording = true;
+            } else {
+                // prepare didn't work, release the camera
+                releaseMediaRecorder();
+                // inform user
+            }
+        }
+    }
+    
     private boolean prepareVideoRecorder(){
     	
     	if (mCamera == null) {
     		mCamera = CameraUtils.getCameraInstance();
     	}
     	
-        mMediaRecorder = new MediaRecorder();
-
-        // Step 1: Unlock and set camera to MediaRecorder
-        mCamera.unlock();
-        mMediaRecorder.setCamera(mCamera);
-
+    	if (mMediaRecorder == null) {
+            mMediaRecorder = new MediaRecorder();
+            
+            // Step 1: Unlock and set camera to MediaRecorder
+    	}
+    	
+    	mCamera.unlock();
+    	
+    	mMediaRecorder.setCamera(mCamera);
         // Step 2: Set sources
         mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
 
         // Step 3: Set a CamcorderProfile (requires API Level 8 or higher)
-        CamcorderProfile profile  = null;
-        if (!this.customRecord) {
-        	profile = CamcorderProfile.get(this.qualityCode);
-        } else {
-        	profile = VideoSettings.getLastSettings(this.getBaseContext());
-        }
-        
+        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_720P);
+        profile.videoBitRate = VideoManager.DEFAULT_BITRATE;
+        profile.videoFrameRate = VideoManager.DEFAULT_FPS;
         mMediaRecorder.setProfile(profile);
+        
+        VideoFile videoFile = new VideoFile(targetString());
+        this.getVideoQueue().pushVideoFile(videoFile);
         // Step 4: Set output file
-        mMediaRecorder.setOutputFile(targetString());
+        mMediaRecorder.setOutputFile(videoFile.filePath);
         // Step 5: Set the preview output
         mMediaRecorder.setPreviewDisplay(mPreview.getHolder().getSurface());
-        mMediaRecorder.setMaxDuration(MAX_DURATION);
+
+        int maxLenght = 0;
+        if (this.mRecorderMode == VideoManager.MODE_VIDEO_REG) {
+        	maxLenght = VideoManager.MAX_VIDEO_LEN;
+        } else {
+        	maxLenght = VideoManager.MAX_VIDEO_LEN_REPORT;
+        }
+        
+        mMediaRecorder.setMaxDuration(maxLenght);
         // Step 6: Prepare configured MediaRecorder
         
         mMediaRecorder.setOnInfoListener(new OnInfoListener() {
-
 			@Override
 			public void onInfo(MediaRecorder mr, int what, int extra) {
-				
-				Log.e("onInfo", "what " + what);
-				
 				// TODO Auto-generated method stub
 				if (MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED == what) {
-					mr.stop();
-					releaseMediaRecorder();
-					isRecording = false;
-					
-					if (prepareVideoRecorder()) {
-                        // Camera is available and unlocked, MediaRecorder is prepared,
-                        // now you can start recording
-                        mMediaRecorder.start();
-                        
-                        Log.e("mMediaRecorder.start()", "mMediaRecorder.start()");
-                        
-                        // inform the user that recording has started
-                        isRecording = true;
-                    } else {
-                        // prepare didn't work, release the camera
-                        releaseMediaRecorder();
-                        // inform user
-                    }
+					if (mRecorderMode == VideoManager.MODE_VIDEO_REG) {
+						toggleRecord();
+					} else {
+						if (isRecording) {
+							stopRecording();
+						}
+					}
 				}
 			}
         	
@@ -208,22 +163,9 @@ public class CameraActivity extends Activity{
     }
     
     private String targetString() {
-    	CamcorderProfile profile  = null;
-        if (!this.customRecord) {
-        	profile = CamcorderProfile.get(this.qualityCode);
-        } else {
-        	profile = VideoSettings.getLastSettings(this.getBaseContext());
-        }
-        
         long timestamp = System.currentTimeMillis();
         
-//        String targetString = Environment.getExternalStorageDirectory() + "/Video/video_" + this.qualityString + "_" + 
-//        profile.videoFrameWidth + "x" + profile.videoFrameHeight + "_br" + profile.videoBitRate + "_fps" + 
-//        		profile.videoFrameRate + ".mp4";
-        
         String targetString = Environment.getExternalStorageDirectory() + "/Video/" + timestamp + ".mp4";
-        
-        Log.e("test", targetString);
         
         return targetString;
     }
@@ -233,7 +175,7 @@ public class CameraActivity extends Activity{
         super.onPause();
         releaseMediaRecorder();       // if you are using MediaRecorder, release it first
         releaseCamera();              // release the camera immediately on pause event
-           this.setRecordInProgress(false);
+        this.setRecordInProgress(false);
     }
     
     @Override
@@ -253,9 +195,9 @@ public class CameraActivity extends Activity{
 
     private void releaseMediaRecorder(){
         if (mMediaRecorder != null) {
-            mMediaRecorder.reset();   // clear recorder configuration
-            mMediaRecorder.release(); // release the recorder object
-            mMediaRecorder = null;
+//            mMediaRecorder.reset();   // clear recorder configuration
+//            mMediaRecorder.release(); // release the recorder object
+//            mMediaRecorder = null;
             mCamera.lock();           // lock camera for later use
         }
     }
@@ -270,4 +212,46 @@ public class CameraActivity extends Activity{
     private void setRecordInProgress(boolean state) {
     	this.isRecording = state;
     }
+    
+    public VideoQueue getVideoQueue() {
+    	if (videoQueue == null) {
+    		videoQueue = new VideoQueue();
+    	}
+		return videoQueue;
+	}
+
+	public void setVideoQueue(VideoQueue videoQueue) {
+		this.videoQueue = videoQueue;
+	}
+
+	class RecordTask extends AsyncTask<Object, Object, Object> {
+		@Override
+		protected Object doInBackground(Object... params) {
+			
+			return null;
+		}
+		
+    }
+	
+	class ConvertTask extends AsyncTask<Object, Object, Object> {
+		@Override
+		protected Object doInBackground(Object... params) {
+			if (isRecording) {
+               stopRecording();
+            }
+			
+			VideoManager manager = new VideoManager();
+            manager.createVideoFromQueue(getVideoQueue());
+			return null;
+		}
+    }
+	
+	public void stopRecording() {
+		 // stop recording and release camera
+        mMediaRecorder.stop();  // stop the recording
+        releaseMediaRecorder(); // release the MediaRecorder object
+
+        // inform the user that recording has stopped
+        isRecording = false;
+	}
 }

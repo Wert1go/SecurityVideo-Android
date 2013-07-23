@@ -54,6 +54,9 @@ public class VideoConfigurationActivity extends Activity implements OnClickListe
 		sizeStrings = CameraUtils.getAvaliableVideoSizeStrings(parameters);
 		
 		profile = VideoSettings.getLastSettings(getBaseContext());
+		if (profile == null) {
+			profile = CamcorderProfile.get(CamcorderProfile.QUALITY_720P);
+		}
 		
 		videoCodec = (Button) findViewById(R.id.video_codec_picker);
 		fileFormat = (Button) findViewById(R.id.file_format_picker);

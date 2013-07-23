@@ -12,8 +12,15 @@
         >
         
         <Button 
-            android:text="Camera"
-            android:id="@+id/camera_button"
+            android:text="VideoReg"
+            android:id="@+id/videoreg_button"
+            android:layout_width="match_parent"
+       		android:layout_height="wrap_content"
+            />
+        
+        <Button 
+            android:text="Report"
+            android:id="@+id/report_button"
             android:layout_width="match_parent"
        		android:layout_height="wrap_content"
             />
