@@ -54,7 +54,10 @@
             android:name="com.itdoesnotmatter.fifo.VideoConfigurationActivity"
             android:label="@string/app_name"	
             />
-        
+         <activity
+            android:name="com.itdoesnotmatter.fifo.VideoListActivity"
+            android:label="@string/app_name"	
+            />
         
     </application>
 

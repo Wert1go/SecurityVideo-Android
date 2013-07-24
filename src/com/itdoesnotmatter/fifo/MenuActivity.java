@@ -23,9 +23,7 @@ public class MenuActivity extends Activity implements OnClickListener{
 		reportButton.setOnClickListener(this);
 		infoButton  = (Button) findViewById(R.id.provider_button);
 		infoButton.setOnClickListener(this);
-		
-		userInfoButton  = (Button) findViewById(R.id.user_button);
-		userInfoButton.setOnClickListener(this);
+
 	}
 
 	@Override
@@ -42,13 +40,10 @@ public class MenuActivity extends Activity implements OnClickListener{
 			startActivity(intentReport);
 			break;
 		case R.id.provider_button:
-			Intent intent1 = new Intent (this, ProviderInfoActvity.class);
+			Intent intent1 = new Intent (this, VideoListActivity.class);
 			this.startActivity(intent1);
 			break;
-		case R.id.user_button:
-			Intent intent2 = new Intent (this, UserInfoActivity.class);
-			this.startActivity(intent2);
-			break;
+
 		}
 	}
 }

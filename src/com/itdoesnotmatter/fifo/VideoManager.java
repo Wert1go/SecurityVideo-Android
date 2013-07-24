@@ -7,11 +7,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.Channels;
+import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-import android.os.Environment;
+import android.content.Context;
 import android.util.Log;
 
 import com.coremedia.iso.IsoFile;
@@ -22,6 +23,7 @@ import com.googlecode.mp4parser.authoring.builder.DefaultMp4Builder;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.AppendTrack;
 import com.googlecode.mp4parser.authoring.tracks.CroppedTrack;
+import com.itdoesnotmatter.fifo.model.VideoDataSource;
 import com.itdoesnotmatter.fifo.model.VideoFile;
 import com.itdoesnotmatter.fifo.model.VideoQueue;
 
@@ -37,25 +39,67 @@ public class VideoManager {
 	public static final int MAX_VIDEO_LEN = 		(int) 10 * 1000;
 	public static final int MAX_VIDEO_LEN_REPORT = 	(int) 1.0 * 60 * 1000;
 	
-	public void createVideoFromQueue(VideoQueue videoQueue) {
+	VideoDataSource dataSource;
+	
+	public VideoManager(Context context) {
+		dataSource = new VideoDataSource(context);
+	}
+	
+	public void createVideoFromQueue(VideoQueue videoQueue, int recorderMode) {
 		int count = videoQueue.getVideoQueue().size();
 		
+		VideoFile compliteVideoFile = null;
+		
 		if (count == 1) {
-			//видео готово
+			compliteVideoFile = videoQueue.getVideoQueue().get(0);
+			
+			String fileName = this.fileNameForType(recorderMode);
+			
+			File oldFile = compliteVideoFile.getFile();
+			
+			compliteVideoFile.setName(fileName);
+			
+			File newFile = compliteVideoFile.getFile();
+			
+			oldFile.renameTo(newFile);
+			
 		} else if (count == 2) {
-			this.joinVideo(videoQueue.getVideoQueue().get(0), videoQueue.getVideoQueue().get(1));
-//			this.joinVideo(
-//					new VideoFile(Environment.getExternalStorageDirectory() + "/Video/1374545060131.mp4"), 
-//					new VideoFile(Environment.getExternalStorageDirectory() + "/Video/1374545362316.mp4"));
+			compliteVideoFile = this.joinVideo(videoQueue.getVideoQueue().get(0), videoQueue.getVideoQueue().get(1), recorderMode);
+		}
+		
+		if (compliteVideoFile != null) {
+			long fileLength = compliteVideoFile.getFile().length();
+			 Log.e("fileLength", "" + fileLength);
+			 double KB = fileLength / 1024;
+			 
+			double fileLengthMB = KB/1024;
+//			DecimalFormat df = new DecimalFormat("#.##");
+//			fileLengthMB = Double.valueOf(df.format(fileLengthMB)) ;
+//			
+//			Log.e("fileLengthMB", "" + fileLengthMB);
+			dataSource.createVideo(compliteVideoFile.getName(), "" + fileLengthMB, recorderMode);
 		}
 	}
 	
+	public String fileNameForType(int recorderType) {
+		int lastId = dataSource.lastIdForType(recorderType) + 1;
+		String nameForType;
+		
+		if (recorderType == VideoManager.MODE_REPORT) {
+			nameForType = "report_" + lastId + ".mp4";
+		} else {
+			nameForType = "videoreg_" + lastId + ".mp4";
+		}
+		
+		return nameForType;
+	}
+	
 	@SuppressWarnings("static-access")
-	public VideoFile joinVideo(VideoFile videoFile1, VideoFile videoFile2) {
+	public VideoFile joinVideo(VideoFile videoFile1, VideoFile videoFile2, int recorderMode) {
     	VideoFile outputVideoFile = null;
 		try {
 			File file1 = videoFile1.getFile();
-			Log.e("LOG", "test " + videoFile1.filePath);
+			Log.e("LOG", "test " + videoFile1.getFilePath());
 	    	InputStream inputStream1 = new FileInputStream(file1);
 			
 			File file2 = videoFile2.getFile();
@@ -91,9 +135,7 @@ public class VideoManager {
 			video1.addTrack(new AppendTrack(videoTracks1.get(1), videoTracks2.get(1)));
 
 	        IsoFile out = new DefaultMp4Builder().build(video1);
-	        outputVideoFile = new VideoFile(String.format(
-	        		Environment.getExternalStorageDirectory() +  "/Video/output1.mp4"
-	        		));
+	        outputVideoFile = new VideoFile(this.fileNameForType(recorderMode));
 	        FileOutputStream fos = new FileOutputStream(outputVideoFile.getFile());
 	        out.getBox(fos.getChannel());
 	        fos.close();
@@ -175,8 +217,7 @@ public class VideoManager {
              IsoFile out = new DefaultMp4Builder().build(movie);
              long start2 = System.currentTimeMillis();
              
-             outputFile = new VideoFile(String.format(Environment.getExternalStorageDirectory() +  
-  	         		"/Video/output23-%f-%f.mp4", startTime1, endTime1));
+             outputFile = new VideoFile(String.format("/output23-%f-%f.mp4", startTime1, endTime1));
              
              FileOutputStream fos = new FileOutputStream(outputFile.getFile());
  	         out.getBox(fos.getChannel());

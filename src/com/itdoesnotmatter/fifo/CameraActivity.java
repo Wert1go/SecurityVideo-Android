@@ -114,10 +114,11 @@ public class CameraActivity extends Activity{
         profile.videoFrameRate = VideoManager.DEFAULT_FPS;
         mMediaRecorder.setProfile(profile);
         
-        VideoFile videoFile = new VideoFile(targetString());
+        VideoFile videoFile = new VideoFile();
+        videoFile.setName(targetString());
         this.getVideoQueue().pushVideoFile(videoFile);
         // Step 4: Set output file
-        mMediaRecorder.setOutputFile(videoFile.filePath);
+        mMediaRecorder.setOutputFile(videoFile.getFilePath());
         // Step 5: Set the preview output
         mMediaRecorder.setPreviewDisplay(mPreview.getHolder().getSurface());
 
@@ -141,6 +142,7 @@ public class CameraActivity extends Activity{
 					} else {
 						if (isRecording) {
 							stopRecording();
+							captureButton.setSelected(!captureButton.isSelected());
 						}
 					}
 				}
@@ -165,7 +167,7 @@ public class CameraActivity extends Activity{
     private String targetString() {
         long timestamp = System.currentTimeMillis();
         
-        String targetString = Environment.getExternalStorageDirectory() + "/Video/" + timestamp + ".mp4";
+        String targetString = timestamp + ".mp4";
         
         return targetString;
     }
@@ -240,8 +242,8 @@ public class CameraActivity extends Activity{
                stopRecording();
             }
 			
-			VideoManager manager = new VideoManager();
-            manager.createVideoFromQueue(getVideoQueue());
+			VideoManager manager = new VideoManager(getBaseContext());
+            manager.createVideoFromQueue(getVideoQueue(), mRecorderMode);
 			return null;
 		}
     }
