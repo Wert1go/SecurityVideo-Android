@@ -1,5 +1,6 @@
 package com.itdoesnotmatter.fifo;
 
+import java.io.File;
 import java.io.IOException;
 
 import android.app.Activity;
@@ -67,7 +68,11 @@ public class CameraActivity extends Activity{
                 }
             }
         );
-
+        
+        File file = new File(VideoManager.BASE_PATH);
+		if (!file.exists()) {
+			file.mkdirs();
+		}
     }
     
     public void toggleRecord() {

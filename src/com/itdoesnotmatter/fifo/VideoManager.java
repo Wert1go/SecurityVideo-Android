@@ -7,12 +7,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.Channels;
-import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
 import android.content.Context;
+import android.media.MediaMetadataRetriever;
+import android.os.Environment;
 import android.util.Log;
 
 import com.coremedia.iso.IsoFile;
@@ -30,19 +31,27 @@ import com.itdoesnotmatter.fifo.model.VideoQueue;
 public class VideoManager {
 	public static final String RECORD_MODE = 	"RECORD_MODE";
 	
+	public static final String BASE_PATH = Environment.getExternalStorageDirectory() + "/SecureVideo/";
+	
 	public static final int DEFAULT_BITRATE = 	2000000;
 	public static final int DEFAULT_FPS = 		30;
 	
 	public static final int MODE_VIDEO_REG = 	3423;
 	public static final int MODE_REPORT = 		3545;
 	
-	public static final int MAX_VIDEO_LEN = 		(int) 10 * 1000;
+	public static final int MAX_VIDEO_LEN = 		(int) 20 * 60 * 1000;
+	public static final int MAX_VIDEO_REG = 		(int) (1.5 * 60 * 1000);
 	public static final int MAX_VIDEO_LEN_REPORT = 	(int) 1.0 * 60 * 1000;
 	
 	VideoDataSource dataSource;
 	
 	public VideoManager(Context context) {
 		dataSource = new VideoDataSource(context);
+		
+		File file = new File(BASE_PATH);
+		if (!file.exists()) {
+			file.mkdirs();
+		}	
 	}
 	
 	public void createVideoFromQueue(VideoQueue videoQueue, int recorderMode) {
@@ -51,7 +60,8 @@ public class VideoManager {
 		VideoFile compliteVideoFile = null;
 		
 		if (count == 1) {
-			compliteVideoFile = videoQueue.getVideoQueue().get(0);
+			VideoFile rawVideo = videoQueue.getVideoQueue().get(0);
+			compliteVideoFile = this.cutIfNeeded(videoQueue.getVideoQueue().get(0));
 			
 			String fileName = this.fileNameForType(recorderMode);
 			
@@ -63,20 +73,22 @@ public class VideoManager {
 			
 			oldFile.renameTo(newFile);
 			
+			rawVideo.erase();
+			
 		} else if (count == 2) {
 			compliteVideoFile = this.joinVideo(videoQueue.getVideoQueue().get(0), videoQueue.getVideoQueue().get(1), recorderMode);
+			
+			VideoFile videoFile = videoQueue.getVideoQueue().get(0);
+			videoFile.erase();
+			videoFile = videoQueue.getVideoQueue().get(1);
+			videoFile.erase();
 		}
 		
 		if (compliteVideoFile != null) {
 			long fileLength = compliteVideoFile.getFile().length();
-			 Log.e("fileLength", "" + fileLength);
 			 double KB = fileLength / 1024;
 			 
 			double fileLengthMB = KB/1024;
-//			DecimalFormat df = new DecimalFormat("#.##");
-//			fileLengthMB = Double.valueOf(df.format(fileLengthMB)) ;
-//			
-//			Log.e("fileLengthMB", "" + fileLengthMB);
 			dataSource.createVideo(compliteVideoFile.getName(), "" + fileLengthMB, recorderMode);
 		}
 	}
@@ -97,6 +109,7 @@ public class VideoManager {
 	@SuppressWarnings("static-access")
 	public VideoFile joinVideo(VideoFile videoFile1, VideoFile videoFile2, int recorderMode) {
     	VideoFile outputVideoFile = null;
+    	VideoFile cuttedFile = null;
 		try {
 			File file1 = videoFile1.getFile();
 			Log.e("LOG", "test " + videoFile1.getFilePath());
@@ -122,7 +135,7 @@ public class VideoManager {
 			} else if (video2Length < video1Length) {
 				long delta = video2Length;
 				
-				VideoFile cuttedFile = this.cut(videoFile1, delta/1000, video1Length/1000);
+				cuttedFile = this.cut(videoFile1, delta/1000, video1Length/1000);
 				if (cuttedFile != null) {
 					inputStream1 = new FileInputStream(cuttedFile.getFile());
 					video1 = mc.build(Channels.newChannel(inputStream1));
@@ -139,6 +152,11 @@ public class VideoManager {
 	        FileOutputStream fos = new FileOutputStream(outputVideoFile.getFile());
 	        out.getBox(fos.getChannel());
 	        fos.close();
+	        
+	        if (cuttedFile != null) {
+	        	cuttedFile.erase();
+	        }
+	        
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -150,6 +168,26 @@ public class VideoManager {
 		return outputVideoFile;
     }
     
+	public VideoFile cutIfNeeded(VideoFile videoFile) {
+    	VideoFile outputVideoFile = null;
+
+		MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+		mmr.setDataSource(videoFile.getFilePath());
+		long video1Length = Long.parseLong(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
+		
+		if (video1Length > MAX_VIDEO_REG) {
+			long delta = video1Length - MAX_VIDEO_REG;
+			Log.e("video1Length", "" + video1Length + "delta " + delta + " :: " + MAX_VIDEO_REG);
+			VideoFile cuttedFile = this.cut(videoFile, delta/1000, video1Length/1000);
+			
+			outputVideoFile = cuttedFile;
+		} else {
+			outputVideoFile = videoFile;
+		}
+		
+		return outputVideoFile;
+	}
+	
     public VideoFile cut(VideoFile videoFile, long from, long to) {
     	VideoFile outputFile = null;
     	
@@ -163,6 +201,8 @@ public class VideoManager {
 
              double startTime1 = from;
              double endTime1 = to;
+             
+             Log.e("CUT", "from: " + startTime1 + " to: " + endTime1);
              
              boolean timeCorrected = false;
 
